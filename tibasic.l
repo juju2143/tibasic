@@ -13,7 +13,7 @@ int charnum = 1;
 ([0-9]*\.?[0-9]+)	{ yylval.nval = atof(yytext); return NUMBER; }
 [A-Z]			{ yylval.nvar = strdup(yytext); return NVAR; }
 \"			{ BEGIN(SBLOCK); }
-<SBLOCK>(\\.|[^\":\n]|)*	{ yylval.sval = strdup(yytext); return STRING; }
+<SBLOCK>(\\.|[^\":\n])*	{ yylval.sval = strdup(yytext); return STRING; }
 <SBLOCK>\"		{ BEGIN(INITIAL); }
 <SBLOCK>[\n:]		{ BEGIN(INITIAL); ++linenum; charnum=1; return ENDL; }
 <SBLOCK>"->"		{ BEGIN(INITIAL); return ASSIGN; }

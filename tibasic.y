@@ -91,10 +91,10 @@ disp_line:
 	| DISP sexpr ENDLS { cout << $2 << endl; }
 	;
 input_line:
-	INPUT sexpr ',' SVAR ENDLS { cout << $2; cin >> svars[$4]; cout << endl; }
-	| INPUT sexpr ',' NVAR ENDLS { cout << $2; cin >> vars[$4]; cout << endl; }
-	| INPUT SVAR ENDLS { cout << "?"; cin >> svars[$2]; cout << endl; }
-	| INPUT NVAR ENDLS { cout << "?"; cin >> vars[$2]; cout << endl; }
+	INPUT sexpr ',' SVAR ENDLS { cout << $2; cin >> svars[$4]; }
+	| INPUT sexpr ',' NVAR ENDLS { cout << $2; cin >> vars[$4]; }
+	| INPUT SVAR ENDLS { cout << "?"; cin >> svars[$2]; }
+	| INPUT NVAR ENDLS { cout << "?"; cin >> vars[$2]; }
 	;
 line:
 	disp_line

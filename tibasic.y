@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <unistd.h>
+#include <sys/wait.h>
 using namespace std;
 
 extern "C" int yylex();
@@ -12,7 +14,9 @@ extern "C" FILE* yyin;
 extern int linenum;
 extern int charnum;
 void yyerror(const char *s);
+void execute(char* file);
 char* filename;
+char* program;
 
 struct cmp_str
 {
@@ -32,6 +36,7 @@ map<char*, char*, cmp_str> svars;
 	char* sval;
 	char* nvar;
 	char* svar;
+	char* file;
 }
 
 %token DISP
@@ -45,6 +50,7 @@ map<char*, char*, cmp_str> svars;
 %token <sval> STRING;
 %token <nvar> NVAR;
 %token <svar> SVAR;
+%token <file> INCL;
 
 %type <nval> expr;
 %type <sval> sexpr;
@@ -99,26 +105,41 @@ input_line:
 line:
 	disp_line
 	| input_line
+	| INCL ENDLS { execute($1); }
 	| expr ENDLS { ans = $1; }
 	| sexpr ENDLS
 	;
 %%
+/*
+exprs:
+	exprs ',' expr { $$ = $1 << $3; }
+	exprs ',' sexpr { $$ = $1 << $3; }
+	| expr { $$=$1; }
+	| sexpr { $$=$1; }
+	;
+*/
 main(int argc, char** argv) {
 	FILE* input;
+	program = argv[0];
 	if(argc > 1)
 	{
 		filename = argv[1];
 		input = fopen(filename, "r");
+		if(!input)
+		{
+			strcat(filename, ".tib");
+			input = fopen(filename, "r");
+			if(!input)
+			{
+				cout << argv[0] << ": " << filename << ": Cannot open file" << endl;
+				return -1;
+			}
+		}
 	}
 	else
 	{
 		filename = "stdin";
 		input = stdin;
-	}
-	if(!input)
-	{
-		cout << argv[0] << ": " << filename << ": Cannot open file" << endl;
-		return -1;
 	}
 	yyin = input;
 	do
@@ -131,11 +152,23 @@ void yyerror(const char *s) {
 	cout << filename << ":" << linenum << ":" << charnum << ": " << s << endl;
 	exit(-1);
 }
-/*
-exprs:
-	exprs ',' expr { $$ = $1 << $3; }
-	exprs ',' sexpr { $$ = $1 << $3; }
-	| expr { $$=$1; }
-	| sexpr { $$=$1; }
-	;
-*/
+
+void execute(char* file)
+{
+	pid_t pid = fork();
+	int status;
+	if(pid<0)
+	{
+		cout << "Error loading " << filename << endl;
+		return;
+	}
+	if(pid != 0)
+	{
+		waitpid(pid, &status, 0);
+	}
+	else
+	{
+		char* args[2] = { program, file };
+		execve(program, args, 0);
+	}
+}

@@ -6,10 +6,17 @@
 #include <map>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <getopt.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 using namespace std;
 
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
 extern "C" int yylex();
 extern "C" int yyparse();
+extern YY_BUFFER_STATE yy_scan_string(const char*);
+extern YY_BUFFER_STATE yy_scan_bytes(const char*, size_t);
+extern void yy_delete_buffer(YY_BUFFER_STATE);
 extern "C" FILE* yyin;
 extern int linenum;
 extern int charnum;
@@ -17,6 +24,8 @@ void yyerror(const char *s);
 void execute(char* file);
 char* filename;
 char* program;
+int interactive = 0;
+int returned_ans = 0;
 
 struct cmp_str
 {
@@ -27,6 +36,7 @@ struct cmp_str
 };
 
 float ans;
+char* sans;
 map<char*, float, cmp_str> vars;
 map<char*, char*, cmp_str> svars;
 %}
@@ -106,8 +116,8 @@ line:
 	disp_line
 	| input_line
 	| INCL ENDLS { execute($1); }
-	| expr ENDLS { ans = $1; }
-	| sexpr ENDLS
+	| expr ENDLS { ans = $1; returned_ans = 1; }
+	| sexpr ENDLS { sans = $1; returned_ans = 2; }
 	;
 %%
 /*
@@ -118,12 +128,37 @@ exprs:
 	| sexpr { $$=$1; }
 	;
 */
-main(int argc, char** argv) {
+void print_usage()
+{
+	cout << "Usage: " << program << " [options] [filename]" << endl;
+	cout << "Interprets TI-BASIC file filename. If not given, interprets stdin." << endl;
+	cout << "  -i, --interactive	Runs as interactive shell" << endl;
+	cout << "  -h, --help		Shows help" << endl;
+	cout << endl;
+}
+int main(int argc, char** argv) {
 	FILE* input;
 	program = argv[0];
-	if(argc > 1)
+	int c;
+	static struct option long_options[] = {
+		{"help",	no_argument,	0,	'h'},
+		{"interactive",	no_argument,	0,	'i'},
+	};
+	int long_index = 0;
+	while((c = getopt_long(argc, argv, "hi", long_options, &long_index))!= -1)
 	{
-		filename = argv[1];
+		switch(c)
+		{
+			case 'h': print_usage();
+				exit(EXIT_SUCCESS);
+				break;
+			case 'i': interactive = 1;
+				break;
+		}
+	}
+	if(optind < argc)
+	{
+		filename = argv[optind];
 		input = fopen(filename, "r");
 		if(!input)
 		{
@@ -138,19 +173,53 @@ main(int argc, char** argv) {
 	}
 	else
 	{
-		filename = "stdin";
+		filename = "-";
 		input = stdin;
 	}
-	yyin = input;
-	do
+	if(interactive != 1 || filename != "-")
 	{
-		yyparse();
-	} while (!feof(yyin));
+		yyin = input;
+		do
+		{
+			yyparse();
+		} while (!feof(yyin));
+	}
+	if(interactive)
+	{
+		yyin = NULL;
+		rl_bind_key ('\t', rl_insert);
+		char* line_read = (char*)NULL;
+		do
+		{
+			if(line_read)
+			{
+				free(line_read);
+				line_read = (char*)NULL;
+			}
+
+			line_read = readline("");
+			
+			if(!line_read) break;
+
+			if(line_read && *line_read)
+			{
+				add_history(line_read);
+				strcat(line_read, "\n\0\0");
+				yy_scan_bytes(line_read, strlen(line_read)+2);
+				yyparse();
+				if(returned_ans == 1)
+					cout << ans << endl;
+				if(returned_ans == 2)
+					cout << sans << endl;
+				returned_ans = 0;
+			}
+		} while (1);
+	}
 }
 
 void yyerror(const char *s) {
 	cout << filename << ":" << linenum << ":" << charnum << ": " << s << endl;
-	exit(-1);
+	if(interactive != 1) exit(-1);
 }
 
 void execute(char* file)

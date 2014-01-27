@@ -10,6 +10,7 @@ int charnum = 1;
 %x SBLOCK
 %%
 [ \t\0]			;
+#.*			;
 ([0-9]*\.?[0-9]+)	{ yylval.nval = atof(yytext); return NUMBER; }
 [A-Z]			{ yylval.nvar = strdup(yytext); return NVAR; }
 \"			{ BEGIN(SBLOCK); }

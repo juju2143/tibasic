@@ -80,10 +80,6 @@ lines:
 	lines line
 	| line
 	;
-ENDLS:
-	ENDLS ENDL
-	| ENDL
-	;
 expr:
 	NUMBER { $$ = $1; }
 	| ANS { $$ = ans; }
@@ -103,24 +99,29 @@ sexpr:
 	| sexpr ASSIGN SVAR { $$ = $1; svars[$3] = $1; }
 	;
 disp_line:
-	DISP expr ENDLS { cout << $2 << endl; }
-	| DISP sexpr ENDLS { cout << $2 << endl; }
+	DISP expr ENDL { cout << $2 << endl; }
+	| DISP sexpr ENDL { cout << $2 << endl; }
 	;
 input_line:
-	INPUT sexpr ',' SVAR ENDLS { cout << $2; cin >> svars[$4]; }
-	| INPUT sexpr ',' NVAR ENDLS { cout << $2; cin >> vars[$4]; }
-	| INPUT SVAR ENDLS { cout << "?"; cin >> svars[$2]; }
-	| INPUT NVAR ENDLS { cout << "?"; cin >> vars[$2]; }
+	INPUT sexpr ',' SVAR ENDL { cout << $2; cin >> svars[$4]; }
+	| INPUT sexpr ',' NVAR ENDL { cout << $2; cin >> vars[$4]; }
+	| INPUT SVAR ENDL { cout << "?"; cin >> svars[$2]; }
+	| INPUT NVAR ENDL { cout << "?"; cin >> vars[$2]; }
 	;
 line:
 	disp_line
 	| input_line
-	| INCL ENDLS { execute($1); }
-	| expr ENDLS { ans = $1; returned_ans = 1; }
-	| sexpr ENDLS { sans = $1; returned_ans = 2; }
+	| INCL ENDL { execute($1); }
+	| expr ENDL { ans = $1; returned_ans = 1; }
+	| sexpr ENDL { sans = $1; returned_ans = 2; }
+	| ENDL
 	;
 %%
-/*
+/* useless rules
+ENDLS:
+	ENDLS ENDL
+	| ENDL
+	;
 exprs:
 	exprs ',' expr { $$ = $1 << $3; }
 	exprs ',' sexpr { $$ = $1 << $3; }

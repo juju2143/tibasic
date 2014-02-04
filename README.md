@@ -12,7 +12,7 @@ Run
 ---
 If you don't give a TI-BASIC script as an argument, the executable will read from stdin.
 ```
-cat script.tib | tibasic
+tibasic < script.tib
 tibasic script.tib
 ```
 
